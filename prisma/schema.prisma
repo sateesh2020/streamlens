@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Cluster {
+  id                  Int      @id @default(autoincrement())
+  name                String
+  brokers             String
+  authType            String   @default("none") @map("auth_type")
+  authConfig          Json     @default("{}") @map("auth_config")
+  schemaRegistryUrl   String?  @map("schema_registry_url")
+  description         String?
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  topics              Topic[]
+  schemaSubjects      SchemaSubject[]
+  topicDailySnapshots TopicDailySnapshot[]
+
+  @@map("clusters")
+}
+
+model Topic {
+  id                          Int      @id @default(autoincrement())
+  clusterId                   Int      @map("cluster_id")
+  name                        String
+  isInternal                  Boolean  @default(false) @map("is_internal")
+  partitionCount              Int      @default(0) @map("partition_count")
+  replicationFactor           Int      @default(0) @map("replication_factor")
+  hasUnderReplicatedPartitions Boolean  @default(false) @map("has_under_replicated_partitions")
+  totalMessageCount           Int      @default(0) @map("total_message_count")
+  messageCountSyncFailed      Boolean  @default(false) @map("message_count_sync_failed")
+  syncedAt                    DateTime @default(now()) @map("synced_at")
+
+  cluster Cluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+
+  @@unique([clusterId, name])
+  @@map("topics")
+}
+
+model TopicDailySnapshot {
+  id            Int      @id @default(autoincrement())
+  clusterId     Int      @map("cluster_id")
+  topicName     String   @map("topic_name")
+  snapshotDate  DateTime @db.Date @map("snapshot_date")
+  messageCount  Int      @default(0) @map("message_count")
+  recordedAt    DateTime @default(now()) @map("recorded_at")
+
+  cluster Cluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+
+  @@unique([clusterId, topicName, snapshotDate])
+  @@map("topic_daily_snapshots")
+}
+
+model SchemaSubject {
+  id            Int      @id @default(autoincrement())
+  clusterId     Int      @map("cluster_id")
+  subject       String
+  schemaType    String   @default("UNKNOWN") @map("schema_type")
+  versionCount  Int      @default(1) @map("version_count")
+  latestVersion Int      @default(1) @map("latest_version")
+  compatibility String   @default("")
+  syncedAt      DateTime @default(now()) @map("synced_at")
+
+  cluster Cluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+
+  @@unique([clusterId, subject])
+  @@map("schema_subjects")
+}

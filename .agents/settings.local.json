@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/codemonkey/.claude/**)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(mkdir -p /Users/codemonkey/workspace/Ziply/dip/.claude/skills/fullstack-dev)",
+      "Bash(mkdir -p /Users/codemonkey/workspace/Ziply/dip/.claude/skills/qa-engineer)",
+      "Bash(mkdir -p /Users/codemonkey/workspace/Ziply/dip/.claude/skills/project-manager)",
+      "Bash(mkdir -p /Users/codemonkey/workspace/Ziply/dip/.claude/skills/product-manager)",
+      "Bash(mkdir -p /Users/codemonkey/workspace/Ziply/dip/.claude/skills/devops)",
+      "Bash(curl -s --max-time 15 http://spaelapv08.nw1.nwestnetwork.com:8080/api/graphql -X POST -H 'Content-Type: application/json' -d '{\"query\":\"{ __type\\(name: \\\\\"Dataset\\\\\"\\) { fields { name type { name kind ofType { name kind } } } } }\"}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s --max-time 15 http://spaelapv08.nw1.nwestnetwork.com:8080/api/graphql -X POST -H 'Content-Type: application/json' -d '{\"query\":\"{ search\\(input: { type: DATASET, query: \\\\\"*\\\\\", start: 0, count: 5, filters: [{ field: \\\\\"platform\\\\\", value: \\\\\"mssql\\\\\" }] }\\) { total searchResults { entity { urn ... on Dataset { name health { type message causes { type message } } testResults { passing { test { urn name } lastRun { result { type } } } failing { test { urn name } lastRun { result { type } } } } assertions\\(start: 0, count: 3\\) { total } } } } } }\"}')"
+    ]
+  }
+}

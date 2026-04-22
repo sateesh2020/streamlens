@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: streamlens_db
+    restart: unless-stopped
+    ports:
+      - "5438:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-streamlens}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-D0n1f0rg3tm3!}
+      POSTGRES_DB: ${POSTGRES_DB:-streamlens}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-streamlens}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: streamlens_redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
