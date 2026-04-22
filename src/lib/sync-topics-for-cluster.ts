@@ -4,6 +4,12 @@ import { Cluster } from "@/types"
 import { TopicSummary } from "@/app/api/clusters/[id]/topics/route"
 
 const TIMEOUT_MS = 15_000
+// KafkaJS admin is not safe for concurrent fetchTopicOffsets calls on the same
+// instance — internal request tracking gets confused. Sequential (1 at a time)
+// is reliable because the connection stays open between calls.
+const OFFSET_BATCH_SIZE = 1
+// Shorter per-fetch timeout so a stalled topic fails fast and doesn't block the rest.
+const OFFSET_TIMEOUT_MS = 8_000
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -12,6 +18,22 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
       setTimeout(() => r(new Error(`Timed out after ${ms}ms`)), ms)
     ),
   ])
+}
+
+// Run fn over items with at most `concurrency` in-flight at once.
+// Returns results in the same order as items, matching Promise.allSettled shape.
+async function batchSettled<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>
+): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = new Array(items.length)
+  for (let i = 0; i < items.length; i += concurrency) {
+    const batch = items.slice(i, i + concurrency)
+    const batchResults = await Promise.allSettled(batch.map(fn))
+    batchResults.forEach((r, j) => { results[i + j] = r })
+  }
+  return results
 }
 
 function mapPrismaCluster(row: {
@@ -75,13 +97,14 @@ export async function syncTopicsForCluster(clusterId: number): Promise<SyncTopic
 
     const syncedAt = new Date()
 
-    // Fetch offsets in parallel; tolerate per-topic failures
-    const offsetResults = await Promise.allSettled(
-      allNames.map((name) =>
-        withTimeout(admin.fetchTopicOffsets(name), TIMEOUT_MS).then(
+    // Fetch offsets in batches to avoid overwhelming the broker with concurrent requests
+    const offsetResults = await batchSettled(
+      allNames,
+      OFFSET_BATCH_SIZE,
+      (name) =>
+        withTimeout(admin.fetchTopicOffsets(name), OFFSET_TIMEOUT_MS).then(
           (offsets) => ({ name, offsets })
         )
-      )
     )
 
     const messageCountMap = new Map<string, { count: number; failed: boolean }>()

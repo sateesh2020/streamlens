@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import {
   Activity,
+  BarChart2,
   BookOpen,
   ChevronDown,
   ChevronRight,
@@ -24,15 +25,29 @@ import { Cluster, ApiResponse } from "@/types"
 // Per-cluster sub-nav
 // ---------------------------------------------------------------------------
 
-const CLUSTER_SUB_NAV = [
+const CLUSTER_SUB_NAV: {
+  label: string
+  href: (id: string) => string
+  icon: React.ElementType
+  isActive?: (pathname: string, id: string) => boolean
+}[] = [
   {
     label: "Topics",
-    href: (id: string) => `/clusters/${id}/topics`,
+    href: (id) => `/clusters/${id}/topics`,
     icon: Layers,
+    // active for topics + topic detail, but NOT the dashboard sub-route
+    isActive: (pathname, id) =>
+      pathname.startsWith(`/clusters/${id}/topics`) &&
+      !pathname.startsWith(`/clusters/${id}/topics/dashboard`),
+  },
+  {
+    label: "Topic Metrics",
+    href: (id) => `/clusters/${id}/topics/dashboard`,
+    icon: BarChart2,
   },
   {
     label: "Consumer Groups",
-    href: (id: string) => `/clusters/${id}/consumer-groups`,
+    href: (id) => `/clusters/${id}/consumer-groups`,
     icon: Users,
   },
 ]
@@ -71,7 +86,9 @@ function ClusterNavItem({ cluster, isExpanded, onToggle, pathname }: ClusterNavI
         <ul className="mt-0.5 ml-3 space-y-0.5 border-l border-sidebar-border pl-3">
           {CLUSTER_SUB_NAV.map((item) => {
             const href = item.href(String(cluster.id))
-            const isActive = pathname.startsWith(href)
+            const isActive = item.isActive
+              ? item.isActive(pathname, String(cluster.id))
+              : pathname.startsWith(href)
             return (
               <li key={item.label}>
                 <Link

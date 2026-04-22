@@ -380,9 +380,19 @@ export async function PATCH(
       return sum + Math.max(0, high - low)
     }, 0)
 
+    const now = new Date()
+    const today = new Date(now)
+    today.setUTCHours(0, 0, 0, 0)
+
     await prisma.topic.updateMany({
       where: { clusterId: id, name: topicName },
       data: { totalMessageCount, messageCountSyncFailed: false },
+    })
+
+    await prisma.topicDailySnapshot.upsert({
+      where: { clusterId_topicName_snapshotDate: { clusterId: id, topicName, snapshotDate: today } },
+      create: { clusterId: id, topicName, snapshotDate: today, messageCount: totalMessageCount },
+      update: { messageCount: totalMessageCount, recordedAt: now },
     })
 
     return NextResponse.json({ success: true, data: { name: topicName, totalMessageCount } })
