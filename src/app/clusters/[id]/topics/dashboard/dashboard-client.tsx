@@ -164,9 +164,12 @@ export function TopicsDashboardClient({ cluster }: Props) {
     staleTime: 5 * 60_000,
   })
 
-  // Sort topics by total message count, pick top N for the chart
+  // Exclude internal/system topics (__ or _ prefix) then sort by latest count
   const sortedHistory = React.useMemo(
-    () => (data?.history ?? []).slice().sort((a, b) => latestCount(b) - latestCount(a)),
+    () =>
+      (data?.history ?? [])
+        .filter((h) => !h.topicName.startsWith("_"))
+        .sort((a, b) => latestCount(b) - latestCount(a)),
     [data]
   )
 
